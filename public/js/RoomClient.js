@@ -4923,6 +4923,7 @@ class RoomClient {
     // ####################################################
 
     handlePIP(elemId, pipId) {
+        console.log('i found it');
         let videoPlayer = this.getId(elemId);
         let btnPIP = this.getId(pipId);
         if (btnPIP) {

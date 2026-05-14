@@ -269,14 +269,14 @@ function getUUID4() {
 }
 
 function joinRoom() {
-    const cookies = document.cookie.split(';');
-    const userTokenCookie = cookies.find(cookie => cookie.trim().startsWith('userToken='));
-
-
-    if (!userTokenCookie) {
-        window.location.href = '/';
-        return;
-    }
+    // const cookies = document.cookie.split(';');
+    // const userTokenCookie = cookies.find(cookie => cookie.trim().startsWith('userToken='));
+    //
+    //
+    // if (!userTokenCookie) {
+    //     window.location.href = '/';
+    //     return;
+    // }
 
     const roomName = filterXSS(document.getElementById('roomName').value).trim().replace(/\s+/g, '-');
     const roomValid = isValidRoomName(roomName);
