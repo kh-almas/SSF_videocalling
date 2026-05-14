@@ -1819,6 +1819,7 @@ function roomIsReady() {
     if (isMobileDevice) {
         hide(initVideoAudioRefreshButton);
         BUTTONS.main.swapCameraButton && show(swapCameraButton);
+        BUTTONS.main.startScreenButton && show(startScreenButton);
         rc.chatMaximize();
         hide(chatTogglePin);
         hide(chatMaxButton);
