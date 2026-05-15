@@ -1756,6 +1756,22 @@ function joinRoom(peer_name, room_id) {
             transcription,
             roomIsReady
         );
+        const documentPiPButton = document.getElementById('documentPiPButton');
+
+        if ('documentPictureInPicture' in window) {
+            documentPiPButton.classList.remove('hidden');
+
+            documentPiPButton.addEventListener('click', async () => {
+                await rc.openDocumentPIP();
+            });
+
+            // Optional auto open on tab switch
+            document.addEventListener('visibilitychange', async () => {
+                if (document.hidden && !rc.isDocumentPipOpen) {
+                    await rc.openDocumentPIP();
+                }
+            });
+        }
         handleRoomClientEvents();
     }
 }
