@@ -35,6 +35,7 @@ const thisInfo = getInfo();
 
 const isEmbedded = window.self !== window.top;
 const showDocumentPipBtn = !isEmbedded && 'documentPictureInPicture' in window;
+let googleMeetPiPWindow = null;
 
 /**
  * Initializes a Socket.IO client instance with custom connection and reconnection options.
@@ -225,6 +226,7 @@ const settingsExtraDropdown = getId('settingsExtraDropdown');
 const settingsExtraToggle = getId('settingsExtraToggle');
 const settingsExtraMenu = getId('settingsExtraMenu');
 const noExtraButtons = getId('noExtraButtons');
+const googleMeetPiPButton = getId('googleMeetPiPButton');
 
 // ####################################################
 // VIRTUAL BACKGROUND DEFAULT IMAGES AND INIT CLASS
@@ -511,6 +513,7 @@ async function initClient() {
     setupWhiteboard();
     initEnumerateDevices();
     setupInitButtons();
+    setupGoogleMeetPiP();
 }
 
 // ####################################################
@@ -537,6 +540,7 @@ function refreshMainButtonsToolTipPlacement() {
         setTippy('participantsButton', 'Toggle participants list', bPlacement);
         setTippy('settingsButton', 'Toggle the settings', bPlacement);
         setTippy('exitButton', 'Leave room', bPlacement);
+        setTippy('googleMeetPiPButton', 'Mini meeting', bPlacement);
     }
 }
 
@@ -1756,22 +1760,6 @@ function joinRoom(peer_name, room_id) {
             transcription,
             roomIsReady
         );
-        const documentPiPButton = document.getElementById('documentPiPButton');
-
-        if ('documentPictureInPicture' in window) {
-            documentPiPButton.classList.remove('hidden');
-
-            documentPiPButton.addEventListener('click', async () => {
-                await rc.openDocumentPIP();
-            });
-
-            // Optional auto open on tab switch
-            document.addEventListener('visibilitychange', async () => {
-                if (document.hidden && !rc.isDocumentPipOpen) {
-                    await rc.openDocumentPIP();
-                }
-            });
-        }
         handleRoomClientEvents();
     }
 }
@@ -8244,4 +8232,214 @@ function updateTimerDisplay(el, seconds) {
     if (seconds <= 30) {
         el.parentElement.classList.add('breakout-timer-warning');
     }
+}
+
+
+function setupGoogleMeetPiP() {
+    if (!googleMeetPiPButton) return;
+
+    if (!showDocumentPipBtn) {
+        hide(googleMeetPiPButton);
+        console.warn('Document Picture-in-Picture is not supported in this browser.');
+        return;
+    }
+
+    show(googleMeetPiPButton);
+
+    googleMeetPiPButton.onclick = async () => {
+        await openGoogleMeetPiP();
+    };
+}
+
+async function openGoogleMeetPiP() {
+    try {
+        if (!('documentPictureInPicture' in window)) {
+            userLog('warning', 'Mini meeting is not supported in this browser');
+            return;
+        }
+
+        if (googleMeetPiPWindow && !googleMeetPiPWindow.closed) {
+            googleMeetPiPWindow.focus();
+            return;
+        }
+
+        googleMeetPiPWindow = await window.documentPictureInPicture.requestWindow({
+            width: 420,
+            height: 280,
+            disallowReturnToOpener: false,
+            preferInitialWindowPlacement: true,
+        });
+
+        googleMeetPiPWindow.document.title = 'Mini Meeting';
+
+        googleMeetPiPWindow.document.body.innerHTML = `
+            <style>
+                * {
+                    box-sizing: border-box;
+                }
+
+                body {
+                    margin: 0;
+                    background: #111;
+                    color: #fff;
+                    font-family: Arial, sans-serif;
+                    overflow: hidden;
+                }
+
+                .pip-header {
+                    height: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 0 10px;
+                    background: #1f1f1f;
+                    font-size: 13px;
+                    font-weight: bold;
+                }
+
+                .pip-close {
+                    border: none;
+                    background: #333;
+                    color: #fff;
+                    border-radius: 6px;
+                    padding: 4px 8px;
+                    cursor: pointer;
+                }
+
+                .pip-grid {
+                    width: 100vw;
+                    height: calc(100vh - 36px);
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 6px;
+                    padding: 6px;
+                    background: #000;
+                }
+
+                .pip-video-box {
+                    position: relative;
+                    background: #222;
+                    border-radius: 10px;
+                    overflow: hidden;
+                }
+
+                .pip-video-box video {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    background: #000;
+                }
+
+                .pip-name {
+                    position: absolute;
+                    left: 6px;
+                    bottom: 6px;
+                    background: rgba(0, 0, 0, 0.55);
+                    color: white;
+                    font-size: 11px;
+                    padding: 3px 6px;
+                    border-radius: 6px;
+                    max-width: 90%;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .pip-empty {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #aaa;
+                    font-size: 14px;
+                    height: 100%;
+                }
+            </style>
+
+            <div class="pip-header">
+                <span>Mini Meeting test</span>
+                <button class="pip-close" id="pipCloseBtn">Close</button>
+                <button class="pip-close" id="pipCloseBtn">Close Meeting</button>
+            </div>
+
+            <div id="pipGrid" class="pip-grid"></div>
+        `;
+
+        googleMeetPiPWindow.document
+            .getElementById('pipCloseBtn')
+            .onclick = () => googleMeetPiPWindow.close();
+
+        renderGoogleMeetPiPVideos();
+
+        googleMeetPiPWindow.addEventListener('pagehide', () => {
+            googleMeetPiPWindow = null;
+        });
+
+        const observer = new MutationObserver(() => {
+            if (googleMeetPiPWindow && !googleMeetPiPWindow.closed) {
+                renderGoogleMeetPiPVideos();
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+
+        googleMeetPiPWindow.addEventListener('pagehide', () => {
+            observer.disconnect();
+        });
+    } catch (err) {
+        console.error('Mini meeting PiP error:', err);
+        userLog('error', 'Unable to open mini meeting');
+    }
+}
+
+function renderGoogleMeetPiPVideos() {
+    if (!googleMeetPiPWindow || googleMeetPiPWindow.closed) return;
+
+    const pipGrid = googleMeetPiPWindow.document.getElementById('pipGrid');
+    if (!pipGrid) return;
+
+    pipGrid.innerHTML = '';
+
+    const videos = Array.from(document.querySelectorAll('video'))
+        .filter((video) => video.srcObject && video.readyState >= 1)
+        .slice(0, 4);
+
+    if (!videos.length) {
+        pipGrid.innerHTML = `<div class="pip-empty">No active video</div>`;
+        return;
+    }
+
+    videos.forEach((video, index) => {
+        const box = googleMeetPiPWindow.document.createElement('div');
+        box.className = 'pip-video-box';
+
+        const pipVideo = googleMeetPiPWindow.document.createElement('video');
+        pipVideo.autoplay = true;
+        pipVideo.playsInline = true;
+        pipVideo.muted = video.muted;
+        pipVideo.srcObject = video.srcObject;
+
+        const name = googleMeetPiPWindow.document.createElement('div');
+        name.className = 'pip-name';
+        name.textContent = getPiPVideoName(video, index);
+
+        box.appendChild(pipVideo);
+        box.appendChild(name);
+        pipGrid.appendChild(box);
+
+        pipVideo.play().catch(() => {});
+    });
+}
+
+function getPiPVideoName(video, index) {
+    const parent = video.closest('.Camera, .Screen, .video-box, .videoMedia, .peer');
+    const nameEl = parent?.querySelector('.username, .userName, .peer-name, .name');
+
+    if (nameEl && nameEl.textContent.trim()) {
+        return nameEl.textContent.trim();
+    }
+
+    return index === 0 ? 'You' : `Participant ${index + 1}`;
 }

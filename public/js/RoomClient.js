@@ -509,78 +509,6 @@ class RoomClient {
             this._isConnected = true;
             successCallback();
         });
-
-        this.documentPipWindow = null;
-        this.isDocumentPipOpen = false;
-    }
-
-
-    async openDocumentPIP() {
-        if (!this.documentPipWindow) return;
-
-        const pipDoc = this.documentPipWindow.document;
-
-        const main = pipDoc.getElementById('pipMain');
-        const participants = pipDoc.getElementById('pipParticipants');
-
-        if (!main || !participants) return;
-
-        main.innerHTML = '';
-        participants.innerHTML = '';
-
-        // MAIN VIDEO
-        const allVideos = document.querySelectorAll('video');
-
-        if (allVideos.length > 0) {
-            const activeVideo = allVideos[0].cloneNode(true);
-
-            activeVideo.srcObject = allVideos[0].srcObject;
-            activeVideo.autoplay = true;
-            activeVideo.muted = true;
-            activeVideo.playsInline = true;
-
-            main.appendChild(activeVideo);
-        }
-
-        // PARTICIPANTS
-        const cameraCards = document.querySelectorAll('.Camera');
-
-        cameraCards.forEach((card, index) => {
-            if (index > 5) return;
-
-            const pipCard = pipDoc.createElement('div');
-            pipCard.className = 'pip-card';
-
-            const originalVideo = card.querySelector('video');
-            const originalName = card.querySelector('p');
-
-            if (originalVideo && originalVideo.srcObject) {
-                const video = pipDoc.createElement('video');
-                video.srcObject = originalVideo.srcObject;
-                video.autoplay = true;
-                video.muted = true;
-                video.playsInline = true;
-
-                pipCard.appendChild(video);
-            } else {
-                const avatar = pipDoc.createElement('div');
-                avatar.className = 'pip-avatar';
-
-                const nameText = originalName ? originalName.innerText.trim() : 'U';
-
-                avatar.innerText = nameText.charAt(0).toUpperCase();
-
-                pipCard.appendChild(avatar);
-            }
-
-            const name = pipDoc.createElement('div');
-            name.className = 'pip-name';
-            name.innerText = originalName ? originalName.innerText : 'Participant';
-
-            pipCard.appendChild(name);
-
-            participants.appendChild(pipCard);
-        });
     }
 
     // ####################################################
@@ -3294,11 +3222,6 @@ class RoomClient {
             default:
                 break;
         }
-
-        if (this.isDocumentPipOpen) {
-            this.renderDocumentPIP();
-        }
-
         return elem;
     }
 
@@ -4062,9 +3985,6 @@ class RoomClient {
 
         this.consumers.get(consumer_id).close();
         this.consumers.delete(consumer_id);
-        if (this.isDocumentPipOpen) {
-            this.renderDocumentPIP();
-        }
         this.sound('left');
     }
 
@@ -4218,10 +4138,6 @@ class RoomClient {
         this.editorUpdate();
 
         this.handleHideMe();
-
-        if (this.isDocumentPipOpen) {
-            this.renderDocumentPIP();
-        }
     }
 
     removeVideoOff(peer_id) {
@@ -4235,10 +4151,6 @@ class RoomClient {
             handleAspectRatio();
             console.log('[removeVideoOff] Video-element-count', this.videoMediaContainer.childElementCount);
             if (peer_id != this.peer_id) this.sound('left');
-        }
-
-        if (this.isDocumentPipOpen) {
-            this.renderDocumentPIP();
         }
     }
 
