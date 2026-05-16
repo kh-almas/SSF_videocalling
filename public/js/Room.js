@@ -8277,155 +8277,508 @@ async function openGoogleMeetPiP() {
             preferInitialWindowPlacement: true,
         });
 
-        // Add Font Awesome dynamically
+        googleMeetPiPWindow.document.title = 'Mini Meeting';
+
+        const renderPiPContent = () => {
+            googleMeetPiPWindow.document.body.innerHTML = `
+                <style>
+                    * {
+                        box-sizing: border-box;
+                    }
+
+                    body {
+                        margin: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        overflow: hidden;
+                        background: #111827;
+                        font-family: Arial, Helvetica, sans-serif;
+                        color: #ffffff;
+                    }
+
+                    .pip-wrapper {
+                        width: 100vw;
+                        height: 100vh;
+                        display: flex;
+                        flex-direction: column;
+                        background: #111827;
+                    }
+
+                    .pip-video-area {
+                        flex: 1;
+                        min-height: 0;
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #000000;
+                        overflow: hidden;
+                    }
+
+                    .pip-video-area video {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        background: #000000;
+                    }
+
+                    .pip-avatar-box {
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 10px;
+                        background: radial-gradient(circle, #374151 0%, #111827 70%);
+                    }
+
+                    .pip-avatar {
+                        width: 90px;
+                        height: 90px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                        background: #1f2937;
+                        border: 3px solid rgba(255, 255, 255, 0.25);
+                    }
+
+                    .pip-avatar-letter {
+                        width: 90px;
+                        height: 90px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #2563eb;
+                        color: white;
+                        font-size: 36px;
+                        font-weight: 700;
+                        border: 3px solid rgba(255, 255, 255, 0.25);
+                    }
+
+                    .pip-name {
+                        position: absolute;
+                        left: 10px;
+                        bottom: 10px;
+                        max-width: calc(100% - 20px);
+                        padding: 5px 9px;
+                        border-radius: 999px;
+                        background: rgba(0, 0, 0, 0.55);
+                        color: #ffffff;
+                        font-size: 12px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+
+                    .pip-controls {
+                        height: 64px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        padding: 8px 10px;
+                        background: #1f2937;
+                        border-top: 1px solid rgba(255, 255, 255, 0.08);
+                        flex-wrap: nowrap;
+                    }
+
+                    .pip-btn {
+                        width: 42px;
+                        height: 42px;
+                        border: 0;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        color: #ffffff;
+                        background: #374151;
+                        font-size: 16px;
+                        flex: 0 0 auto;
+                    }
+
+                    .pip-btn:hover {
+                        background: #4b5563;
+                    }
+
+                    .pip-btn.active {
+                        background: #2563eb;
+                    }
+
+                    .pip-btn.warning {
+                        background: #f59e0b;
+                    }
+
+                    .pip-btn.danger {
+                        background: #dc2626;
+                    }
+
+                    .pip-btn.close {
+                        background: #6b7280;
+                    }
+
+                    .pip-empty {
+                        text-align: center;
+                        padding: 20px;
+                        color: #d1d5db;
+                        font-size: 14px;
+                    }
+                </style>
+
+                <div class="pip-wrapper">
+                    <div id="pipVideoArea" class="pip-video-area">
+                        <div class="pip-empty">Loading mini meeting...</div>
+                    </div>
+
+                    <div class="pip-controls">
+                        <button id="pipAudioBtn" class="pip-btn" title="Audio">
+                            <i id="pipAudioIcon" class="fas fa-microphone"></i>
+                        </button>
+
+                        <button id="pipVideoBtn" class="pip-btn" title="Camera">
+                            <i id="pipVideoIcon" class="fas fa-video"></i>
+                        </button>
+
+                        <button id="pipScreenBtn" class="pip-btn" title="Start screen share">
+                            <i id="pipScreenIcon" class="fas fa-desktop"></i>
+                        </button>
+
+                        <button id="pipHandBtn" class="pip-btn" title="Raise hand">
+                            <i id="pipHandIcon" class="fas fa-hand-paper"></i>
+                        </button>
+
+                        <button id="pipLeaveBtn" class="pip-btn danger" title="Leave room">
+                            <i class="fa-solid fa-phone-slash"></i>
+                        </button>
+
+                        <button id="pipCloseBtn" class="pip-btn close" title="Close PiP">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            bindGoogleMeetPiPButtons();
+            renderGoogleMeetPiP();
+
+            googleMeetPiPObserver = new MutationObserver(() => {
+                renderGoogleMeetPiP();
+            });
+
+            googleMeetPiPObserver.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'style'],
+            });
+
+            googleMeetPiPInterval = setInterval(() => {
+                renderGoogleMeetPiP();
+            }, 1000);
+
+            googleMeetPiPWindow.addEventListener('pagehide', () => {
+                closeGoogleMeetPiPReferences();
+            });
+        };
+
         const faLink = googleMeetPiPWindow.document.createElement('link');
         faLink.rel = 'stylesheet';
         faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
         faLink.crossOrigin = 'anonymous';
         faLink.referrerPolicy = 'no-referrer';
-        googleMeetPiPWindow.document.head.appendChild(faLink);
 
-        // Wait for Font Awesome to load before adding HTML
-        faLink.onload = () => {
-            googleMeetPiPWindow.document.body.innerHTML = `
-                <style>
-                    *{box-sizing:border-box;}
-                    body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#111827;font-family:Arial,Helvetica,sans-serif;color:#fff;}
-                    .pip-wrapper{width:100vw;height:100vh;display:flex;flex-direction:column;background:#111827;}
-                    .pip-video-area{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;}
-                    .pip-video-area video{width:100%;height:100%;object-fit:cover;background:#000;}
-                    .pip-avatar-box{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle,#374151 0%,#111827 70%);}
-                    .pip-avatar{width:90px;height:90px;border-radius:50%;object-fit:cover;background:#1f2937;border:3px solid rgba(255,255,255,0.25);}
-                    .pip-avatar-letter{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#2563eb;color:white;font-size:36px;font-weight:700;border:3px solid rgba(255,255,255,0.25);}
-                    .pip-name{position:absolute;left:10px;bottom:10px;max-width:calc(100%-20px);padding:5px 9px;border-radius:999px;background:rgba(0,0,0,0.55);color:#fff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-                    .pip-controls{height:64px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;background:#1f2937;}
-                    .pip-btn{width:42px;height:42px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;background:#374151;font-size:16px;}
-                    .pip-btn:hover{background:#4b5563;}
-                    .pip-btn.active{background:#2563eb;}
-                    .pip-btn.danger{background:#dc2626;}
-                    .pip-btn.close{background:#6b7280;}
-                </style>
-                <div class="pip-wrapper">
-                    <div id="pipVideoArea" class="pip-video-area">
-                        <div class="pip-empty">Loading mini meeting...</div>
-                    </div>
-                    <div class="pip-controls">
-                        <button id="pipAudioBtn" class="pip-btn" title="Audio"><i id="pipAudioIcon" class="fas fa-microphone"></i></button>
-                        <button id="pipVideoBtn" class="pip-btn" title="Camera"><i id="pipVideoIcon" class="fas fa-video"></i></button>
-                        <button id="pipHandBtn" class="pip-btn" title="Raise hand"><i id="pipHandIcon" class="fas fa-hand-paper"></i></button>
-                        <button id="pipLeaveBtn" class="pip-btn danger" title="Leave room"><i class="fas fa-phone-slash"></i></button>
-                        <button id="pipCloseBtn" class="pip-btn close" title="Close PiP"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-            `;
+        let pipRendered = false;
 
-            // Bind buttons & render video/avatar
-            bindGoogleMeetPiPButtons();
-            renderGoogleMeetPiP();
-
-            googleMeetPiPObserver = new MutationObserver(() => renderGoogleMeetPiP());
-            googleMeetPiPObserver.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
-
-            googleMeetPiPInterval = setInterval(() => renderGoogleMeetPiP(), 1000);
-            googleMeetPiPWindow.addEventListener('pagehide', () => closeGoogleMeetPiPReferences());
+        const safeRender = () => {
+            if (pipRendered) return;
+            pipRendered = true;
+            renderPiPContent();
         };
 
-    } catch(err) {
+        faLink.onload = safeRender;
+        faLink.onerror = safeRender;
+        googleMeetPiPWindow.document.head.appendChild(faLink);
+
+        setTimeout(safeRender, 300);
+
+    } catch (err) {
         console.error('Mini meeting PiP error:', err);
-        userLog('error','Unable to open mini meeting');
+        userLog('error', 'Unable to open mini meeting');
     }
 }
 
-// -----------------
-// Bind PiP buttons
-// -----------------
 function bindGoogleMeetPiPButtons() {
     if (!googleMeetPiPWindow || googleMeetPiPWindow.closed) return;
+
     const doc = googleMeetPiPWindow.document;
+
     const pipAudioBtn = doc.getElementById('pipAudioBtn');
     const pipVideoBtn = doc.getElementById('pipVideoBtn');
+    const pipScreenBtn = doc.getElementById('pipScreenBtn');
     const pipHandBtn = doc.getElementById('pipHandBtn');
     const pipLeaveBtn = doc.getElementById('pipLeaveBtn');
     const pipCloseBtn = doc.getElementById('pipCloseBtn');
 
-    pipAudioBtn.onclick = ()=>{audio?stopAudioButton.click():startAudioButton.click();setTimeout(updateGoogleMeetPiPButtons,300);};
-    pipVideoBtn.onclick = ()=>{video?stopVideoButton.click():startVideoButton.click();setTimeout(()=>{updateGoogleMeetPiPButtons();renderGoogleMeetPiP();},500);};
-    pipHandBtn.onclick = ()=>{hand?lowerHandButton.click():raiseHandButton.click();setTimeout(updateGoogleMeetPiPButtons,300);};
-    pipLeaveBtn.onclick = ()=>exitButton.click();
-    pipCloseBtn.onclick = ()=>googleMeetPiPWindow.close();
+    if (pipAudioBtn) {
+        pipAudioBtn.onclick = () => {
+            audio ? stopAudioButton.click() : startAudioButton.click();
+            setTimeout(updateGoogleMeetPiPButtons, 300);
+        };
+    }
+
+    if (pipVideoBtn) {
+        pipVideoBtn.onclick = () => {
+            video ? stopVideoButton.click() : startVideoButton.click();
+            setTimeout(() => {
+                updateGoogleMeetPiPButtons();
+                renderGoogleMeetPiP();
+            }, 500);
+        };
+    }
+
+    if (pipScreenBtn) {
+        pipScreenBtn.onclick = () => {
+            screen ? stopScreenButton.click() : startScreenButton.click();
+            setTimeout(() => {
+                updateGoogleMeetPiPButtons();
+                renderGoogleMeetPiP();
+            }, 500);
+        };
+    }
+
+    if (pipHandBtn) {
+        pipHandBtn.onclick = () => {
+            hand ? lowerHandButton.click() : raiseHandButton.click();
+            setTimeout(updateGoogleMeetPiPButtons, 300);
+        };
+    }
+
+    if (pipLeaveBtn) {
+        pipLeaveBtn.onclick = () => {
+            exitButton.click();
+        };
+    }
+
+    if (pipCloseBtn) {
+        pipCloseBtn.onclick = () => {
+            googleMeetPiPWindow.close();
+        };
+    }
 
     updateGoogleMeetPiPButtons();
 }
 
-// -----------------
-// Update PiP button states
-// -----------------
 function updateGoogleMeetPiPButtons() {
-    if(!googleMeetPiPWindow||googleMeetPiPWindow.closed) return;
+    if (!googleMeetPiPWindow || googleMeetPiPWindow.closed) return;
+
     const doc = googleMeetPiPWindow.document;
+
     const pipAudioBtn = doc.getElementById('pipAudioBtn');
     const pipVideoBtn = doc.getElementById('pipVideoBtn');
+    const pipScreenBtn = doc.getElementById('pipScreenBtn');
     const pipHandBtn = doc.getElementById('pipHandBtn');
+
     const pipAudioIcon = doc.getElementById('pipAudioIcon');
     const pipVideoIcon = doc.getElementById('pipVideoIcon');
+    const pipScreenIcon = doc.getElementById('pipScreenIcon');
     const pipHandIcon = doc.getElementById('pipHandIcon');
 
-    if(pipAudioBtn&&pipAudioIcon){pipAudioBtn.classList.toggle('active',!!audio);pipAudioIcon.className=audio?'fas fa-microphone':'fas fa-microphone-slash';pipAudioBtn.title=audio?'Stop audio':'Start audio';}
-    if(pipVideoBtn&&pipVideoIcon){pipVideoBtn.classList.toggle('active',!!video);pipVideoIcon.className=video?'fas fa-video':'fas fa-video-slash';pipVideoBtn.title=video?'Stop camera':'Start camera';}
-    if(pipHandBtn&&pipHandIcon){pipHandBtn.classList.toggle('active',!!hand);pipHandBtn.title=hand?'Lower hand':'Raise hand';}
+    if (pipAudioBtn && pipAudioIcon) {
+        pipAudioBtn.classList.toggle('active', !!audio);
+        pipAudioIcon.className = audio ? 'fas fa-microphone' : 'fas fa-microphone-slash';
+        pipAudioBtn.title = audio ? 'Stop audio' : 'Start audio';
+    }
+
+    if (pipVideoBtn && pipVideoIcon) {
+        pipVideoBtn.classList.toggle('active', !!video);
+        pipVideoIcon.className = video ? 'fas fa-video' : 'fas fa-video-slash';
+        pipVideoBtn.title = video ? 'Stop camera' : 'Start camera';
+    }
+
+    if (pipScreenBtn && pipScreenIcon) {
+        pipScreenBtn.classList.toggle('warning', !!screen);
+        pipScreenBtn.classList.toggle('active', false);
+        pipScreenIcon.className = screen ? 'fas fa-stop-circle' : 'fas fa-desktop';
+        pipScreenBtn.title = screen ? 'Stop screen share' : 'Start screen share';
+    }
+
+    if (pipHandBtn && pipHandIcon) {
+        pipHandBtn.classList.toggle('active', !!hand);
+        pipHandBtn.title = hand ? 'Lower hand' : 'Raise hand';
+    }
 }
 
-// -----------------
-// Render PiP video/avatar
-// -----------------
 function renderGoogleMeetPiP() {
-    if(!googleMeetPiPWindow||googleMeetPiPWindow.closed) return;
+    if (!googleMeetPiPWindow || googleMeetPiPWindow.closed) return;
+
     updateGoogleMeetPiPButtons();
+
     const doc = googleMeetPiPWindow.document;
     const pipVideoArea = doc.getElementById('pipVideoArea');
-    if(!pipVideoArea) return;
+
+    if (!pipVideoArea) return;
+
     const selectedVideo = getGoogleMeetPiPSelectedVideo();
+
     pipVideoArea.innerHTML = '';
-    if(selectedVideo&&selectedVideo.srcObject){
+
+    if (selectedVideo && selectedVideo.srcObject) {
         const pipVideo = doc.createElement('video');
-        pipVideo.autoplay = true; pipVideo.playsInline = true; pipVideo.muted = true; pipVideo.srcObject = selectedVideo.srcObject;
-        pipVideo.style.objectFit = window.getComputedStyle(selectedVideo).objectFit||'cover';
+
+        pipVideo.autoplay = true;
+        pipVideo.playsInline = true;
+        pipVideo.muted = true;
+        pipVideo.srcObject = selectedVideo.srcObject;
+        pipVideo.className = selectedVideo.className || '';
+
+        const sourceVideoStyle = window.getComputedStyle(selectedVideo);
+        pipVideo.style.objectFit = sourceVideoStyle.objectFit || 'cover';
+
         pipVideoArea.appendChild(pipVideo);
-        const name = doc.createElement('div'); name.className='pip-name'; name.textContent=getPiPVideoName(selectedVideo); pipVideoArea.appendChild(name);
-        pipVideo.play().catch(()=>{});
+
+        const name = doc.createElement('div');
+        name.className = 'pip-name';
+        name.textContent = getPiPVideoName(selectedVideo);
+        pipVideoArea.appendChild(name);
+
+        pipVideo.play().catch(() => {});
         return;
     }
+
     renderGoogleMeetPiPAvatar(pipVideoArea);
 }
 
-// -----------------
-// Render avatar if no video
-// -----------------
-function renderGoogleMeetPiPAvatar(pipVideoArea){
-    if(!googleMeetPiPWindow||googleMeetPiPWindow.closed) return;
-    const doc=googleMeetPiPWindow.document;
-    const avatarBox=doc.createElement('div'); avatarBox.className='pip-avatar-box';
-    if(peer_avatar){const avatar=doc.createElement('img');avatar.className='pip-avatar';avatar.src=peer_avatar;avatar.alt=peer_name||'User';avatarBox.appendChild(avatar);}
-    else{const avatarLetter=doc.createElement('div');avatarLetter.className='pip-avatar-letter';avatarLetter.textContent=getPiPAvatarLetter();avatarBox.appendChild(avatarLetter);}
-    const name=doc.createElement('div');name.className='pip-name';name.textContent=peer_name||'You';
-    pipVideoArea.appendChild(avatarBox); pipVideoArea.appendChild(name);
-}
+function getGoogleMeetPiPSelectedVideo() {
+    const videos = Array.from(document.querySelectorAll('video')).filter((videoEl) => {
+        if (!videoEl.srcObject) return false;
+        if (videoEl.closest('#initUser')) return false;
+        if (videoEl.offsetParent === null && videoEl.readyState === 0) return false;
+        return true;
+    });
 
-// -----------------
-// Helpers
-// -----------------
-function getGoogleMeetPiPSelectedVideo(){
-    const videos=Array.from(document.querySelectorAll('video')).filter(v=>v.srcObject&&v.offsetParent!==null);
-    if(!videos.length) return null;
-    const pinned=videos.find(v=>v.closest('.pinned,.videoPinned')||v.dataset.pinned==='true')||null;
-    if(pinned) return pinned;
-    const screen=videos.find(v=>v.id.toLowerCase().includes('screen')||v.id.toLowerCase().includes('share'))||null;
-    if(screen) return screen;
-    const myCam=videos.find(v=>v.id.toLowerCase().includes(socket.id))||null;
-    if(myCam) return myCam;
+    if (!videos.length) return null;
+
+    const pinnedVideo =
+        videos.find((videoEl) => {
+            const parent = getVideoParentBox(videoEl);
+            if (!parent) return false;
+
+            return (
+                parent.classList.contains('pinned') ||
+                parent.classList.contains('pin') ||
+                parent.classList.contains('videoPin') ||
+                parent.classList.contains('videoPinned') ||
+                parent.classList.contains('isPinned') ||
+                parent.dataset?.pin === 'true' ||
+                parent.dataset?.pinned === 'true' ||
+                parent.querySelector('.fa-thumbtack, .fa-map-pin, .pin-video, .pinned-video')
+            );
+        }) || null;
+
+    if (pinnedVideo) return pinnedVideo;
+
+    const screenVideo =
+        videos.find((videoEl) => {
+            const parent = getVideoParentBox(videoEl);
+            const idClassText = `${videoEl.id} ${videoEl.className} ${parent?.id || ''} ${parent?.className || ''}`.toLowerCase();
+
+            return (
+                idClassText.includes('screen') ||
+                idClassText.includes('share') ||
+                idClassText.includes('presenter')
+            );
+        }) || null;
+
+    if (screenVideo) return screenVideo;
+
+    const myCameraVideo =
+        videos.find((videoEl) => {
+            const parent = getVideoParentBox(videoEl);
+            const idClassText = `${videoEl.id} ${videoEl.className} ${parent?.id || ''} ${parent?.className || ''}`.toLowerCase();
+
+            return (
+                idClassText.includes('local') ||
+                idClassText.includes('my') ||
+                (typeof socket !== 'undefined' && socket?.id && idClassText.includes(socket.id.toLowerCase()))
+            );
+        }) || null;
+
+    if (myCameraVideo) return myCameraVideo;
+
     return videos[0];
 }
 
-function getPiPVideoName(videoEl){const parent=videoEl.closest('.Camera,.Screen,.video-box');return (parent?.querySelector('.peer-name')?.textContent?.trim())||peer_name||'You';}
-function getPiPAvatarLetter(){return (peer_name||'U').trim().charAt(0).toUpperCase();}
-function closeGoogleMeetPiPReferences(){if(googleMeetPiPObserver){googleMeetPiPObserver.disconnect();googleMeetPiPObserver=null;}if(googleMeetPiPInterval){clearInterval(googleMeetPiPInterval);googleMeetPiPInterval=null;}googleMeetPiPWindow=null;}
+function renderGoogleMeetPiPAvatar(pipVideoArea) {
+    if (!googleMeetPiPWindow || googleMeetPiPWindow.closed) return;
+
+    const doc = googleMeetPiPWindow.document;
+    const avatarBox = doc.createElement('div');
+
+    avatarBox.className = 'pip-avatar-box';
+
+    if (typeof peer_avatar !== 'undefined' && peer_avatar) {
+        const avatar = doc.createElement('img');
+        avatar.className = 'pip-avatar';
+        avatar.src = peer_avatar;
+        avatar.alt = (typeof peer_name !== 'undefined' && peer_name) ? peer_name : 'User';
+        avatarBox.appendChild(avatar);
+    } else {
+        const avatarLetter = doc.createElement('div');
+        avatarLetter.className = 'pip-avatar-letter';
+        avatarLetter.textContent = getPiPAvatarLetter();
+        avatarBox.appendChild(avatarLetter);
+    }
+
+    const name = doc.createElement('div');
+    name.className = 'pip-name';
+    name.textContent = (typeof peer_name !== 'undefined' && peer_name) ? peer_name : 'You';
+
+    pipVideoArea.appendChild(avatarBox);
+    pipVideoArea.appendChild(name);
+}
+
+function getVideoParentBox(videoEl) {
+    return videoEl.closest(
+        '.Camera, .Screen, .video-box, .videoMedia, .peer, .videoPeer, .videoContainer, .videoWrap, div'
+    );
+}
+
+function getPiPVideoName(videoEl) {
+    const parent = getVideoParentBox(videoEl);
+
+    const nameEl = parent?.querySelector(
+        '.username, .userName, .peer-name, .name, .videoPeerName, .peerName'
+    );
+
+    if (nameEl && nameEl.textContent.trim()) {
+        return nameEl.textContent.trim();
+    }
+
+    const idClassText = `${videoEl.id} ${videoEl.className} ${parent?.id || ''} ${parent?.className || ''}`.toLowerCase();
+
+    if (idClassText.includes('screen') || idClassText.includes('share')) {
+        return 'Screen share';
+    }
+
+    return (typeof peer_name !== 'undefined' && peer_name) ? peer_name : 'You';
+}
+
+function getPiPAvatarLetter() {
+    const name = (typeof peer_name !== 'undefined' && peer_name) ? peer_name : 'U';
+    return name.trim().charAt(0).toUpperCase();
+}
+
+function closeGoogleMeetPiPReferences() {
+    if (googleMeetPiPObserver) {
+        googleMeetPiPObserver.disconnect();
+        googleMeetPiPObserver = null;
+    }
+
+    if (googleMeetPiPInterval) {
+        clearInterval(googleMeetPiPInterval);
+        googleMeetPiPInterval = null;
+    }
+
+    googleMeetPiPWindow = null;
+}
