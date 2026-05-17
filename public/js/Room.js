@@ -36,8 +36,18 @@ const thisInfo = getInfo();
 const isEmbedded = window.self !== window.top;
 const showDocumentPipBtn = !isEmbedded && 'documentPictureInPicture' in window;
 let googleMeetPiPWindow = null;
+let googleMeetPiPVideoSignature = '';
 let googleMeetPiPObserver = null;
 let googleMeetPiPInterval = null;
+
+function cleanupGoogleMeetPiPState() {
+    googleMeetPiPVideoSignature = '';
+    if (googleMeetPiPInterval) {
+        clearInterval(googleMeetPiPInterval);
+        googleMeetPiPInterval = null;
+    }
+    googleMeetPiPWindow = null;
+}
 
 /**
  * Initializes a Socket.IO client instance with custom connection and reconnection options.
@@ -8408,25 +8418,48 @@ function updateGoogleMeetPiPButtons() {
 // Render PiP video/avatar
 // -----------------
 function renderGoogleMeetPiP() {
-    if(!googleMeetPiPWindow || googleMeetPiPWindow.closed) return;
+    if (!googleMeetPiPWindow || googleMeetPiPWindow.closed) return;
 
     updateGoogleMeetPiPButtons();
+
     const doc = googleMeetPiPWindow.document;
     const pipVideoArea = doc.getElementById('pipVideoArea');
-    if(!pipVideoArea) return;
+    if (!pipVideoArea) return;
 
     const selectedVideo = getGoogleMeetPiPSelectedVideo();
+
+    const currentSignature = selectedVideo && selectedVideo.srcObject
+        ? [
+            selectedVideo.id,
+            ...selectedVideo.srcObject.getTracks().map(
+                (t) => `${t.kind}:${t.id}:${t.readyState}`
+            ),
+        ].join('|')
+        : 'no-video';
+
+    if (currentSignature === googleMeetPiPVideoSignature) {
+        return;
+    }
+
+    googleMeetPiPVideoSignature = currentSignature;
     pipVideoArea.innerHTML = '';
 
-    if(selectedVideo && selectedVideo.srcObject) {
+    if (selectedVideo && selectedVideo.srcObject) {
         const pipVideo = doc.createElement('video');
-        pipVideo.autoplay = true; pipVideo.playsInline = true; pipVideo.muted = true;
+        pipVideo.autoplay = true;
+        pipVideo.playsInline = true;
+        pipVideo.muted = true;
         pipVideo.srcObject = selectedVideo.srcObject;
-        pipVideo.style.objectFit = window.getComputedStyle(selectedVideo).objectFit || 'cover';
+        pipVideo.style.objectFit =
+            window.getComputedStyle(selectedVideo).objectFit || 'cover';
         pipVideoArea.appendChild(pipVideo);
 
-        const name = doc.createElement('div'); name.className='pip-name'; name.textContent=getPiPVideoName(selectedVideo); pipVideoArea.appendChild(name);
-        pipVideo.play().catch(()=>{});
+        const name = doc.createElement('div');
+        name.className = 'pip-name';
+        name.textContent = getPiPVideoName(selectedVideo);
+        pipVideoArea.appendChild(name);
+
+        pipVideo.play().catch(() => {});
         return;
     }
 
@@ -8492,5 +8525,5 @@ function getPiPAvatarLetter() {
 function closeGoogleMeetPiPReferences(){
     if(googleMeetPiPObserver){ googleMeetPiPObserver.disconnect(); googleMeetPiPObserver=null; }
     if(googleMeetPiPInterval){ clearInterval(googleMeetPiPInterval); googleMeetPiPInterval=null; }
-    googleMeetPiPWindow=null;
+    cleanupGoogleMeetPiPState();
 }
