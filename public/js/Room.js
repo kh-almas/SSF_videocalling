@@ -36,12 +36,12 @@ const thisInfo = getInfo();
 const isEmbedded = window.self !== window.top;
 const showDocumentPipBtn = !isEmbedded && 'documentPictureInPicture' in window;
 let googleMeetPiPWindow = null;
-let googleMeetPiPVideoSignature = '';
+let googleMeetPiPVideoSignature = null;
 let googleMeetPiPObserver = null;
 let googleMeetPiPInterval = null;
 
 function cleanupGoogleMeetPiPState() {
-    googleMeetPiPVideoSignature = '';
+    googleMeetPiPVideoSignature = null;
     if (googleMeetPiPInterval) {
         clearInterval(googleMeetPiPInterval);
         googleMeetPiPInterval = null;
@@ -8276,6 +8276,7 @@ async function openGoogleMeetPiP() {
 
         if (googleMeetPiPWindow && !googleMeetPiPWindow.closed) {
             googleMeetPiPWindow.focus();
+            googleMeetPiPVideoSignature = '';
             renderGoogleMeetPiP();
             return;
         }
@@ -8335,6 +8336,7 @@ async function openGoogleMeetPiP() {
                 </div>
             `;
 
+            googleMeetPiPVideoSignature = '';
             bindGoogleMeetPiPButtons();
             renderGoogleMeetPiP();
 
@@ -8361,8 +8363,9 @@ async function openGoogleMeetPiP() {
 // -----------------
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        if (!googleMeetPiPWindow || googleMeetPiPWindow.closed) {
-            openGoogleMeetPiP();
+        if (googleMeetPiPWindow && !googleMeetPiPWindow.closed) {
+            googleMeetPiPWindow.focus();
+            renderGoogleMeetPiP();
         }
     }
 });
@@ -8428,20 +8431,26 @@ function renderGoogleMeetPiP() {
 
     const selectedVideo = getGoogleMeetPiPSelectedVideo();
 
-    const currentSignature = selectedVideo && selectedVideo.srcObject
-        ? [
-            selectedVideo.id,
-            ...selectedVideo.srcObject.getTracks().map(
-                (t) => `${t.kind}:${t.id}:${t.readyState}`
-            ),
-        ].join('|')
-        : 'no-video';
+    const currentSignature = selectedVideo && selectedVideo.srcObject ? [
+        selectedVideo.id,
+        ...selectedVideo.srcObject.getTracks().map(
+            (t) => `${t.kind}:${t.id}:${t.readyState}`,
+        ),
+    ].join('|') : 'no-video';
+
+    console.log('currentSignature', currentSignature);
+    console.log('googleMeetPiPVideoSignature', googleMeetPiPVideoSignature );
 
     if (currentSignature === googleMeetPiPVideoSignature) {
         return;
     }
 
+
+
+    console.log('asssign log', currentSignature);
+
     googleMeetPiPVideoSignature = currentSignature;
+
     pipVideoArea.innerHTML = '';
 
     if (selectedVideo && selectedVideo.srcObject) {
@@ -8462,6 +8471,7 @@ function renderGoogleMeetPiP() {
         pipVideo.play().catch(() => {});
         return;
     }
+
 
     renderGoogleMeetPiPAvatar(pipVideoArea);
 }
